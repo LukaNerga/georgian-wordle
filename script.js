@@ -1,566 +1,199 @@
-// ==========================================
-//  ქართული ვორდლი — script.js
-//  Full game logic: daily word, board,
-//  keyboard, animations, localStorage
-// ==========================================
+const ROWS = 6;
+const COLS = 5;
 
-'use strict';
+let currentRow = 0;
+let currentCol = 0;
+let gameOver = false;
 
-// ──────────────────────────────────────────
-//  CONSTANTS
-// ──────────────────────────────────────────
+let WORDS = [];
+let DAILY_WORDS = [];
+let word = "";
 
-const WORD_LENGTH   = 5;
-const MAX_GUESSES   = 6;
-const START_DATE    = new Date('2024-01-01T00:00:00Z');
+// LOAD WORDS FROM TXT
+async function loadWords() {
+const res = await fetch("words.txt");
+const text = await res.text();
 
-const STORAGE_KEY   = 'kartuli-wordle-state';
+WORDS = text.split("\n")
+.map(w => w.trim())
+.filter(w => w.length === 5);
 
-const STATE = {
-  CORRECT: 'correct',
-  PRESENT: 'present',
-  ABSENT:  'absent',
-  TBD:     'tbd',
-  EMPTY:   '',
-};
+DAILY_WORDS = WORDS.slice(0, 200); // first 200 words as daily pool
 
-const GEO_MONTHS = [
-  'იანვარი','თებერვალი','მარტი','აპრილი',
-  'მაისი','ივნისი','ივლისი','აგვისტო',
-  'სექტემბერი','ოქტომბერი','ნოემბერი','დეკემბერი',
+startGame();
+}
+
+loadWords();
+
+function startGame() {
+word = getWordOfTheDay();
+
+document.getElementById("date").innerText = getGeorgianDate();
+
+const board = document.getElementById("board");
+
+// create board
+for (let r = 0; r < ROWS; r++) {
+const row = document.createElement("div");
+row.className = "row";
+
+```
+for (let c = 0; c < COLS; c++) {
+  const tile = document.createElement("div");
+  tile.className = "tile";
+  row.appendChild(tile);
+}
+
+board.appendChild(row);
+```
+
+}
+
+createKeyboard();
+}
+
+// KEYBOARD
+function createKeyboard() {
+const keys = [
+["ქ","წ","ე","რ","ტ","ყ","უ","ი","ო","პ"],
+["ა","ს","დ","ფ","გ","ჰ","ჯ","კ","ლ"],
+["Enter","ზ","ხ","ც","ვ","ბ","ნ","მ","⌫"]
 ];
 
-const WIN_MESSAGES = [
-  'გენიალური! 🧠',
-  'შესანიშნავი! ⭐',
-  'ბრავო! 🎉',
-  'კარგი! 👏',
-  'ფუ, ძლივს! 😅',
-  'კარგად! 😤',
-];
+const keyboard = document.getElementById("keyboard");
 
-const EMOJI = {
-  [STATE.CORRECT]: '🟩',
-  [STATE.PRESENT]: '🟨',
-  [STATE.ABSENT]:  '⬛',
-};
+keys.forEach(row => {
+const div = document.createElement("div");
+div.className = "key-row";
 
-// ──────────────────────────────────────────
-//  DOM REFERENCES
-// ──────────────────────────────────────────
+```
+row.forEach(k => {
+  const key = document.createElement("div");
+  key.className = "key";
+  key.innerText = k;
 
-const boardEl        = document.getElementById('board');
-const keyboardEl     = document.getElementById('keyboard');
-const dateEl         = document.getElementById('current-date');
-const notifEl        = document.getElementById('notification');
-const modalOverlay   = document.getElementById('modal-overlay');
-const modalIcon      = document.getElementById('modal-icon');
-const modalTitle     = document.getElementById('modal-title');
-const modalSubtitle  = document.getElementById('modal-subtitle');
-const modalWordEl    = document.getElementById('modal-word');
-const modalResult    = document.getElementById('modal-result');
-const modalShareBtn  = document.getElementById('modal-share-btn');
-const modalCloseBtn  = document.getElementById('modal-close-btn');
+  key.onclick = () => handleKey(k);
+  div.appendChild(key);
+});
 
-// ──────────────────────────────────────────
-//  GAME STATE
-// ──────────────────────────────────────────
+keyboard.appendChild(div);
+```
 
-let targetWord   = '';
-let guesses      = [];      // Array of submitted words (strings)
-let currentInput = [];      // Array of chars being typed (current row)
-let gameOver     = false;
-let gameWon      = false;
-let dayIndex     = 0;
-
-// Tile DOM references: tiles[row][col]
-let tiles = [];
-// Key DOM references: keysMap[char] = buttonEl
-let keysMap = {};
-
-// ──────────────────────────────────────────
-//  INIT
-// ──────────────────────────────────────────
-
-function init() {
-  dayIndex    = getDayIndex();
-  targetWord  = getDailyWord();
-
-  displayDate();
-  buildBoard();
-  buildKeyMap();
-  restoreState();
-  attachListeners();
+});
 }
 
-// ──────────────────────────────────────────
-//  DATE & WORD SELECTION
-// ──────────────────────────────────────────
-
-function getDayIndex() {
-  const now       = new Date();
-  const utcNow    = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const utcStart  = Date.UTC(
-    START_DATE.getFullYear(),
-    START_DATE.getMonth(),
-    START_DATE.getDate()
-  );
-  return Math.floor((utcNow - utcStart) / 86400000);
+// PHYSICAL KEYBOARD
+document.addEventListener("keydown", (e) => {
+if (e.key === "Enter") handleKey("Enter");
+else if (e.key === "Backspace") handleKey("⌫");
+else {
+const letter = e.key.toLowerCase();
+if (/^[ა-ჰ]$/.test(letter)) handleKey(letter);
 }
-
-function getDailyWord() {
-  const pool = typeof DAILY_WORDS !== 'undefined' ? DAILY_WORDS : WORDS;
-  return pool[dayIndex % pool.length];
-}
-
-function displayDate() {
-  const now  = new Date();
-  const day  = now.getDate();
-  const mon  = GEO_MONTHS[now.getMonth()];
-  dateEl.textContent = `${day} ${mon}`;
-}
-
-// ──────────────────────────────────────────
-//  BUILD DOM
-// ──────────────────────────────────────────
-
-function buildBoard() {
-  boardEl.innerHTML = '';
-  tiles = [];
-  for (let r = 0; r < MAX_GUESSES; r++) {
-    const rowTiles = [];
-    const rowEl = document.createElement('div');
-    rowEl.className = 'board-row';
-    rowEl.setAttribute('data-row', r);
-
-    for (let c = 0; c < WORD_LENGTH; c++) {
-      const tile = document.createElement('div');
-      tile.className = 'tile';
-      tile.setAttribute('data-row', r);
-      tile.setAttribute('data-col', c);
-      rowEl.appendChild(tile);
-      rowTiles.push(tile);
-    }
-
-    boardEl.appendChild(rowEl);
-    tiles.push(rowTiles);
-  }
-}
-
-function buildKeyMap() {
-  keysMap = {};
-  document.querySelectorAll('.key[data-key]').forEach(btn => {
-    const key = btn.getAttribute('data-key');
-    if (key && key.length === 1) {
-      keysMap[key] = btn;
-    }
-  });
-}
-
-// ──────────────────────────────────────────
-//  GEORGIAN CHARACTER UTILITIES
-// ──────────────────────────────────────────
-
-function isGeorgianChar(ch) {
-  if (!ch || ch.length !== 1) return false;
-  const code = ch.codePointAt(0);
-  return code >= 0x10D0 && code <= 0x10FF;
-}
-
-function georgianLength(str) {
-  return [...str].filter(isGeorgianChar).length;
-}
-
-// ──────────────────────────────────────────
-//  INPUT HANDLING
-// ──────────────────────────────────────────
+});
 
 function handleKey(key) {
-  if (gameOver) return;
+if (gameOver) return;
 
-  if (key === 'Enter') {
-    submitGuess();
-    return;
-  }
+const board = document.getElementById("board");
 
-  if (key === 'Backspace' || key === 'Delete') {
-    deleteLetter();
-    return;
-  }
-
-  if (isGeorgianChar(key)) {
-    addLetter(key);
-  }
+if (key === "⌫") {
+if (currentCol > 0) {
+currentCol--;
+board.children[currentRow].children[currentCol].innerText = "";
+}
+return;
 }
 
-function addLetter(ch) {
-  if (currentInput.length >= WORD_LENGTH) return;
-  currentInput.push(ch);
-  updateCurrentRow();
+if (key === "Enter") {
+if (currentCol < COLS) return;
+checkRow();
+return;
 }
 
-function deleteLetter() {
-  if (currentInput.length === 0) return;
-  currentInput.pop();
-  updateCurrentRow();
+if (currentCol < COLS) {
+board.children[currentRow].children[currentCol].innerText = key;
+currentCol++;
+}
 }
 
-function updateCurrentRow() {
-  const row = guesses.length;
-  if (row >= MAX_GUESSES) return;
+function checkRow() {
+const board = document.getElementById("board");
+let guess = "";
 
-  for (let c = 0; c < WORD_LENGTH; c++) {
-    const tile = tiles[row][c];
-    const ch   = currentInput[c] || '';
-    tile.textContent = ch;
-    tile.setAttribute('data-state', ch ? STATE.TBD : STATE.EMPTY);
-  }
+for (let i = 0; i < COLS; i++) {
+guess += board.children[currentRow].children[i].innerText;
 }
 
-// ──────────────────────────────────────────
-//  SUBMIT GUESS
-// ──────────────────────────────────────────
-
-function submitGuess() {
-  if (currentInput.length < WORD_LENGTH) {
-    showNotification('სიტყვა არ არის სრული');
-    shakeCurrentRow();
-    return;
-  }
-
-  const guessWord = currentInput.join('');
-
-  // Validate word exists in word list
-  const allWords = typeof WORDS !== 'undefined' ? WORDS : [];
-  const dailyWords = typeof DAILY_WORDS !== 'undefined' ? DAILY_WORDS : [];
-  const combined = [...new Set([...allWords, ...dailyWords, targetWord])];
-  
-  if (!combined.includes(guessWord)) {
-    showNotification('სიტყვა არ მოიძებნა');
-    shakeCurrentRow();
-    return;
-  }
-
-  const row       = guesses.length;
-  const result    = evaluateGuess(guessWord, targetWord);
-
-  // Animate tiles
-  revealRow(row, guessWord, result);
-
-  guesses.push(guessWord);
-  currentInput = [];
-
-  const won = result.every(r => r === STATE.CORRECT);
-
-  if (won) {
-    gameWon  = true;
-    gameOver = true;
-    saveState();
-    const delay = WORD_LENGTH * 80 + 600;
-    setTimeout(() => {
-      bounceWinRow(row);
-      setTimeout(() => showModal(true), 500);
-    }, delay);
-    return;
-  }
-
-  if (guesses.length >= MAX_GUESSES) {
-    gameOver = true;
-    saveState();
-    const delay = WORD_LENGTH * 80 + 600;
-    setTimeout(() => showModal(false), delay);
-    return;
-  }
-
-  saveState();
+if (!WORDS.includes(guess)) {
+alert("არასწორი სიტყვა");
+return;
 }
 
-// ──────────────────────────────────────────
-//  GUESS EVALUATION
-// ──────────────────────────────────────────
+let wordArr = word.split("");
 
-function evaluateGuess(guess, target) {
-  const result    = new Array(WORD_LENGTH).fill(STATE.ABSENT);
-  const targetArr = [...target];
-  const guessArr  = [...guess];
+for (let i = 0; i < COLS; i++) {
+const tile = board.children[currentRow].children[i];
 
-  // First pass: correct positions
-  for (let i = 0; i < WORD_LENGTH; i++) {
-    if (guessArr[i] === targetArr[i]) {
-      result[i]    = STATE.CORRECT;
-      targetArr[i] = null;   // consume
-      guessArr[i]  = null;
-    }
-  }
+```
+if (guess[i] === word[i]) {
+  tile.classList.add("correct");
+  wordArr[i] = null;
+}
+```
 
-  // Second pass: present letters
-  for (let i = 0; i < WORD_LENGTH; i++) {
-    if (guessArr[i] === null) continue;
-    const idx = targetArr.indexOf(guessArr[i]);
-    if (idx !== -1) {
-      result[i]    = STATE.PRESENT;
-      targetArr[idx] = null; // consume
-    }
-  }
-
-  return result;
 }
 
-// ──────────────────────────────────────────
-//  ROW ANIMATIONS
-// ──────────────────────────────────────────
+for (let i = 0; i < COLS; i++) {
+const tile = board.children[currentRow].children[i];
 
-function revealRow(row, word, result) {
-  const chars = [...word];
+```
+if (!tile.classList.contains("correct")) {
+  const index = wordArr.indexOf(guess[i]);
 
-  chars.forEach((ch, col) => {
-    const tile  = tiles[row][col];
-    const state = result[col];
-    const delay = col * 80;
-
-    setTimeout(() => {
-      tile.setAttribute('data-state', state);
-      tile.textContent = ch;
-    }, delay);
-
-    // Update keyboard after flip
-    setTimeout(() => {
-      updateKeyState(ch, state);
-    }, delay + 300);
-  });
-}
-
-function shakeCurrentRow() {
-  const row = guesses.length;
-  if (row >= MAX_GUESSES) return;
-  const rowEl = boardEl.querySelector(`.board-row[data-row="${row}"]`);
-  if (!rowEl) return;
-  rowEl.classList.remove('shake');
-  void rowEl.offsetWidth; // reflow
-  rowEl.classList.add('shake');
-  rowEl.addEventListener('animationend', () => rowEl.classList.remove('shake'), { once: true });
-}
-
-function bounceWinRow(row) {
-  const rowEl = boardEl.querySelector(`.board-row[data-row="${row}"]`);
-  if (!rowEl) return;
-  rowEl.classList.add('win');
-}
-
-// ──────────────────────────────────────────
-//  KEYBOARD STATE
-// ──────────────────────────────────────────
-
-function updateKeyState(ch, newState) {
-  const btn = keysMap[ch];
-  if (!btn) return;
-
-  const current = btn.getAttribute('data-state');
-  // Priority: correct > present > absent
-  const priority = { [STATE.CORRECT]: 3, [STATE.PRESENT]: 2, [STATE.ABSENT]: 1, '': 0 };
-  if ((priority[newState] || 0) > (priority[current] || 0)) {
-    btn.setAttribute('data-state', newState);
-  }
-}
-
-function rebuildKeyboardStates() {
-  // Reset all keys
-  document.querySelectorAll('.key[data-key]').forEach(btn => {
-    btn.removeAttribute('data-state');
-  });
-
-  // Replay all guesses
-  guesses.forEach(word => {
-    const result = evaluateGuess(word, targetWord);
-    [...word].forEach((ch, i) => {
-      updateKeyState(ch, result[i]);
-    });
-  });
-}
-
-// ──────────────────────────────────────────
-//  NOTIFICATIONS
-// ──────────────────────────────────────────
-
-let notifTimer = null;
-
-function showNotification(msg, duration = 1800) {
-  clearTimeout(notifTimer);
-  notifEl.textContent = msg;
-  notifEl.classList.add('show');
-  notifTimer = setTimeout(() => notifEl.classList.remove('show'), duration);
-}
-
-// ──────────────────────────────────────────
-//  MODAL
-// ──────────────────────────────────────────
-
-function showModal(won) {
-  const attemptCount = guesses.length;
-
-  if (won) {
-    modalIcon.textContent    = '🎉';
-    modalTitle.textContent   = WIN_MESSAGES[Math.min(attemptCount - 1, WIN_MESSAGES.length - 1)];
-    modalSubtitle.textContent = `გამოიცანი ${attemptCount}/${MAX_GUESSES} ცდაში`;
+  if (index > -1) {
+    tile.classList.add("present");
+    wordArr[index] = null;
   } else {
-    modalIcon.textContent    = '😔';
-    modalTitle.textContent   = 'სცადე ხვალ!';
-    modalSubtitle.textContent = 'სიტყვა იყო:';
-  }
-
-  modalWordEl.textContent = targetWord.toUpperCase();
-  modalResult.textContent = buildShareText(false);
-
-  modalOverlay.classList.add('show');
-}
-
-function hideModal() {
-  modalOverlay.classList.remove('show');
-}
-
-// ──────────────────────────────────────────
-//  SHARE / COPY
-// ──────────────────────────────────────────
-
-function buildShareText(includeHeader = true) {
-  const lines = guesses.map(word => {
-    const result = evaluateGuess(word, targetWord);
-    return result.map(r => EMOJI[r] || '⬛').join('');
-  });
-
-  if (includeHeader) {
-    const now = new Date();
-    const dateStr = `${now.getDate()} ${GEO_MONTHS[now.getMonth()]}`;
-    return `ქართული ვორდლი #${dayIndex + 1} — ${dateStr}\n${guesses.length}/${MAX_GUESSES}\n\n${lines.join('\n')}`;
-  }
-  return lines.join('\n');
-}
-
-function copyResult() {
-  const text = buildShareText(true);
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => {
-      showNotification('შედეგი დაკოპირდა! 📋', 2000);
-    }).catch(() => fallbackCopy(text));
-  } else {
-    fallbackCopy(text);
+    tile.classList.add("absent");
   }
 }
+```
 
-function fallbackCopy(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand('copy');
-    showNotification('შედეგი დაკოპირდა! 📋', 2000);
-  } catch (e) {
-    showNotification('ვერ დაკოპირდა', 2000);
-  }
-  document.body.removeChild(ta);
 }
 
-// ──────────────────────────────────────────
-//  LOCAL STORAGE
-// ──────────────────────────────────────────
-
-function saveState() {
-  const state = {
-    dayIndex,
-    guesses,
-    gameOver,
-    gameWon,
-  };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    // Storage might be disabled
-  }
+if (guess === word) {
+gameOver = true;
+setTimeout(() => alert("გილოცავ!"), 100);
+return;
 }
 
-function restoreState() {
-  let saved;
-  try {
-    saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-  } catch (e) {
-    saved = null;
-  }
+currentRow++;
+currentCol = 0;
 
-  if (!saved || saved.dayIndex !== dayIndex) {
-    // New day or no save — fresh start
-    return;
-  }
-
-  // Restore guesses
-  guesses  = saved.guesses  || [];
-  gameOver = saved.gameOver || false;
-  gameWon  = saved.gameWon  || false;
-
-  // Render all previous guesses instantly
-  guesses.forEach((word, row) => {
-    const result = evaluateGuess(word, targetWord);
-    const chars  = [...word];
-    chars.forEach((ch, col) => {
-      const tile = tiles[row][col];
-      tile.textContent = ch;
-      tile.setAttribute('data-state', result[col]);
-    });
-  });
-
-  // Rebuild keyboard colors
-  rebuildKeyboardStates();
-
-  // If game is already over, show modal
-  if (gameOver) {
-    setTimeout(() => showModal(gameWon), 600);
-  }
+if (currentRow === ROWS) {
+gameOver = true;
+setTimeout(() => alert("სიტყვა იყო: " + word), 100);
+}
 }
 
-// ──────────────────────────────────────────
-//  EVENT LISTENERS
-// ──────────────────────────────────────────
+// DAILY WORD
+function getWordOfTheDay() {
+const start = new Date(2024, 0, 1);
+const today = new Date();
 
-function attachListeners() {
-  // Physical keyboard
-  document.addEventListener('keydown', e => {
-    if (e.ctrlKey || e.altKey || e.metaKey) return;
+const diff = Math.floor((today - start) / (1000 * 60 * 60 * 24));
 
-    if (e.key === 'Enter')     { handleKey('Enter');     return; }
-    if (e.key === 'Backspace') { handleKey('Backspace'); return; }
-
-    // Single Georgian character
-    if (e.key.length === 1 && isGeorgianChar(e.key)) {
-      handleKey(e.key);
-    }
-  });
-
-  // On-screen keyboard
-  keyboardEl.addEventListener('click', e => {
-    const btn = e.target.closest('.key');
-    if (!btn) return;
-    const key = btn.getAttribute('data-key');
-    if (key) handleKey(key);
-  });
-
-  // Modal buttons
-  modalShareBtn.addEventListener('click', copyResult);
-  modalCloseBtn.addEventListener('click', hideModal);
-
-  // Close modal on overlay click
-  modalOverlay.addEventListener('click', e => {
-    if (e.target === modalOverlay) hideModal();
-  });
-
-  // Close modal on Escape
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') hideModal();
-  });
+return DAILY_WORDS[diff % DAILY_WORDS.length];
 }
 
-// ──────────────────────────────────────────
-//  BOOT
-// ──────────────────────────────────────────
+// DATE FORMAT
+function getGeorgianDate() {
+const months = [
+"იანვარი","თებერვალი","მარტი","აპრილი","მაისი","ივნისი",
+"ივლისი","აგვისტო","სექტემბერი","ოქტომბერი","ნოემბერი","დეკემბერი"
+];
 
-document.addEventListener('DOMContentLoaded', init);
+const d = new Date();
+return `${d.getDate()} ${months[d.getMonth()]}`;
+}
