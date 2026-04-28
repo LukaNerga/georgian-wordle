@@ -1,527 +1,75 @@
-/* ==========================================
-   ქართული ვორდლი — style.css
-   Dark theme, Wordle-inspired design
-   ========================================== */
-
-:root {
-  /* Core colors */
-  --color-bg:         #121213;
-  --color-bg-header:  #1a1a1b;
-  --color-border:     #3a3a3c;
-  --color-text:       #ffffff;
-  --color-text-muted: #818384;
-  --color-subtext:    #565758;
-
-  /* Tile states */
-  --color-empty:      #121213;
-  --color-filled:     #121213;
-  --color-correct:    #538d4e;
-  --color-present:    #b59f3b;
-  --color-absent:     #3a3a3c;
-
-  /* Key states */
-  --color-key-bg:     #818384;
-  --color-key-text:   #ffffff;
-
-  /* Tile sizes */
-  --tile-size:        62px;
-  --tile-gap:         5px;
-  --tile-font-size:   2rem;
-
-  /* Keyboard */
-  --key-height:       58px;
-  --key-font-size:    0.95rem;
-
-  /* Modal */
-  --color-modal-bg:   #1a1a1b;
-  --color-modal-border: #3a3a3c;
-
-  /* Notification */
-  --color-notif-bg:   #ffffff;
-  --color-notif-text: #1a1a1b;
-
-  /* Transitions */
-  --flip-duration:    0.5s;
-  --bounce-duration:  0.1s;
-}
-
-/* ==========================================
-   RESET & BASE
-   ========================================== */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  font-size: 16px;
-  -webkit-text-size-adjust: 100%;
-}
-
 body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: 'Noto Sans Georgian', 'Sylfaen', 'DejaVu Sans', Arial, sans-serif;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
+background: #121213;
+color: white;
+font-family: Arial, sans-serif;
+text-align: center;
+margin: 0;
 }
 
-/* ==========================================
-   HEADER
-   ========================================== */
-.header {
-  width: 100%;
-  background: var(--color-bg-header);
-  border-bottom: 1px solid var(--color-border);
-  padding: 12px 16px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+.container {
+max-width: 500px;
+margin: auto;
+padding-top: 20px;
 }
 
-.header-inner {
-  max-width: 500px;
-  margin: 0 auto;
-  text-align: center;
+h1 {
+margin-bottom: 5px;
 }
 
-.title {
-  font-size: clamp(1.4rem, 5vw, 1.9rem);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text);
-  line-height: 1.1;
+#date {
+color: #aaa;
+margin-bottom: 20px;
 }
 
-.date {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  margin-top: 3px;
-  letter-spacing: 0.04em;
+#board {
+display: grid;
+grid-template-rows: repeat(6, 1fr);
+gap: 6px;
+margin-bottom: 20px;
 }
 
-/* ==========================================
-   NOTIFICATION BANNER
-   ========================================== */
-.notification {
-  position: fixed;
-  top: 72px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-20px);
-  background: var(--color-notif-bg);
-  color: var(--color-notif-text);
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  z-index: 100;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  white-space: nowrap;
-  max-width: calc(100vw - 32px);
-  text-align: center;
+.row {
+display: grid;
+grid-template-columns: repeat(5, 1fr);
+gap: 6px;
 }
 
-.notification.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* ==========================================
-   MAIN LAYOUT
-   ========================================== */
-.main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  max-width: 500px;
-  padding: 16px 8px 12px;
-  gap: 16px;
-}
-
-/* ==========================================
-   BOARD
-   ========================================== */
-.board-wrapper {
-  display: flex;
-  justify-content: center;
-  flex: 1;
-}
-
-.board {
-  display: grid;
-  grid-template-rows: repeat(6, var(--tile-size));
-  grid-template-columns: repeat(5, var(--tile-size));
-  gap: var(--tile-gap);
-}
-
-/* ==========================================
-   TILES
-   ========================================== */
 .tile {
-  width: var(--tile-size);
-  height: var(--tile-size);
-  border: 2px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--tile-font-size);
-  font-weight: 800;
-  text-transform: uppercase;
-  color: var(--color-text);
-  background: var(--color-empty);
-  cursor: default;
-  user-select: none;
-  position: relative;
-  transition: border-color 0.1s;
-  will-change: transform;
+border: 2px solid #3a3a3c;
+height: 60px;
+font-size: 28px;
+display: flex;
+align-items: center;
+justify-content: center;
 }
 
-/* Tile has a letter typed */
-.tile[data-state="tbd"] {
-  border-color: #565758;
-  animation: tile-pop var(--bounce-duration) ease-in-out;
+.correct {
+background: #6aaa64;
 }
 
-/* Tile being flipped */
-.tile[data-state="correct"],
-.tile[data-state="present"],
-.tile[data-state="absent"] {
-  border-color: transparent;
-  animation: tile-flip var(--flip-duration) ease forwards;
+.present {
+background: #c9b458;
 }
 
-.tile[data-state="correct"] { --tile-bg: var(--color-correct); }
-.tile[data-state="present"] { --tile-bg: var(--color-present); }
-.tile[data-state="absent"]  { --tile-bg: var(--color-absent);  }
-
-/* Shake animation on invalid guess */
-.board-row.shake .tile {
-  animation: tile-shake 0.6s ease;
+.absent {
+background: #3a3a3c;
 }
 
-/* Bounce animation on win */
-.board-row.win .tile {
-  animation: tile-bounce 1s ease forwards;
+#keyboard {
+display: grid;
+gap: 5px;
 }
 
-/* Stagger delay for flip animation */
-.tile:nth-child(1) { animation-delay: 0ms; }
-.tile:nth-child(2) { animation-delay: 80ms; }
-.tile:nth-child(3) { animation-delay: 160ms; }
-.tile:nth-child(4) { animation-delay: 240ms; }
-.tile:nth-child(5) { animation-delay: 320ms; }
-
-/* Win bounce stagger */
-.board-row.win .tile:nth-child(1) { animation-delay: 0ms; }
-.board-row.win .tile:nth-child(2) { animation-delay: 100ms; }
-.board-row.win .tile:nth-child(3) { animation-delay: 200ms; }
-.board-row.win .tile:nth-child(4) { animation-delay: 300ms; }
-.board-row.win .tile:nth-child(5) { animation-delay: 400ms; }
-
-/* ==========================================
-   KEYFRAME ANIMATIONS
-   ========================================== */
-
-/* Pop on type */
-@keyframes tile-pop {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.12); }
-  100% { transform: scale(1); }
-}
-
-/* Flip to reveal color */
-@keyframes tile-flip {
-  0%   { transform: rotateX(0deg);   background: var(--color-filled); }
-  49%  { transform: rotateX(90deg);  background: var(--color-filled); }
-  50%  { transform: rotateX(90deg);  background: var(--tile-bg); }
-  100% { transform: rotateX(0deg);   background: var(--tile-bg); }
-}
-
-/* Shake on invalid */
-@keyframes tile-shake {
-  0%, 100% { transform: translateX(0); }
-  10%       { transform: translateX(-4px); }
-  30%       { transform: translateX(4px); }
-  50%       { transform: translateX(-4px); }
-  70%       { transform: translateX(4px); }
-  90%       { transform: translateX(-2px); }
-}
-
-/* Bounce on win */
-@keyframes tile-bounce {
-  0%, 20%  { transform: translateY(0); }
-  40%      { transform: translateY(-28px); }
-  50%      { transform: translateY(5px); }
-  60%      { transform: translateY(-14px); }
-  80%      { transform: translateY(2px); }
-  100%     { transform: translateY(0); }
-}
-
-/* ==========================================
-   KEYBOARD
-   ========================================== */
-.keyboard-wrapper {
-  width: 100%;
-}
-
-.keyboard {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
-.keyboard-row {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
+.key-row {
+display: flex;
+justify-content: center;
 }
 
 .key {
-  height: var(--key-height);
-  min-width: 36px;
-  padding: 0 4px;
-  border: none;
-  border-radius: 4px;
-  background: var(--color-key-bg);
-  color: var(--color-key-text);
-  font-size: var(--key-font-size);
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  max-width: 43px;
-  user-select: none;
-  transition: background 0.2s ease, transform 0.1s ease, opacity 0.2s;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.key--wide {
-  max-width: 65px;
-  font-size: 1.1rem;
-}
-
-.key:active {
-  transform: scale(0.95);
-  opacity: 0.85;
-}
-
-/* Key states after guesses */
-.key[data-state="correct"] {
-  background: var(--color-correct);
-  color: #fff;
-}
-
-.key[data-state="present"] {
-  background: var(--color-present);
-  color: #fff;
-}
-
-.key[data-state="absent"] {
-  background: var(--color-absent);
-  color: var(--color-text-muted);
-}
-
-/* ==========================================
-   MODAL OVERLAY
-   ========================================== */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  padding: 16px;
-}
-
-.modal-overlay.show {
-  opacity: 1;
-  pointer-events: all;
-}
-
-.modal {
-  background: var(--color-modal-bg);
-  border: 1px solid var(--color-modal-border);
-  border-radius: 12px;
-  padding: 32px 28px;
-  max-width: 400px;
-  width: 100%;
-  text-align: center;
-  transform: scale(0.9) translateY(20px);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.modal-overlay.show .modal {
-  transform: scale(1) translateY(0);
-}
-
-.modal-icon {
-  font-size: 3rem;
-  line-height: 1;
-}
-
-.modal-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  color: var(--color-text);
-}
-
-.modal-subtitle {
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-}
-
-.modal-word {
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  color: var(--color-correct);
-  text-transform: uppercase;
-  padding: 8px 16px;
-  border: 1px solid var(--color-correct);
-  border-radius: 6px;
-  margin: 4px 0;
-}
-
-.modal-result {
-  font-family: monospace;
-  font-size: 1.5rem;
-  line-height: 1.8;
-  color: var(--color-text);
-  white-space: pre-wrap;
-  word-break: break-all;
-  background: rgba(255,255,255,0.04);
-  border-radius: 8px;
-  padding: 12px;
-  width: 100%;
-}
-
-.modal-share-btn,
-.modal-close-btn {
-  margin-top: 6px;
-  padding: 12px 28px;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  width: 100%;
-  transition: opacity 0.2s, transform 0.1s;
-}
-
-.modal-share-btn {
-  background: var(--color-correct);
-  color: #fff;
-}
-
-.modal-close-btn {
-  background: var(--color-absent);
-  color: var(--color-text-muted);
-}
-
-.modal-share-btn:hover,
-.modal-close-btn:hover {
-  opacity: 0.85;
-}
-
-.modal-share-btn:active,
-.modal-close-btn:active {
-  transform: scale(0.98);
-}
-
-/* ==========================================
-   RESPONSIVE — MOBILE
-   ========================================== */
-@media (max-width: 480px) {
-  :root {
-    --tile-size: 54px;
-    --tile-font-size: 1.7rem;
-    --key-height: 50px;
-    --key-font-size: 0.85rem;
-  }
-
-  .title {
-    font-size: 1.3rem;
-  }
-
-  .key {
-    min-width: 28px;
-  }
-
-  .key--wide {
-    max-width: 56px;
-  }
-}
-
-@media (max-width: 360px) {
-  :root {
-    --tile-size: 46px;
-    --tile-font-size: 1.4rem;
-    --key-height: 46px;
-    --key-font-size: 0.78rem;
-  }
-
-  .key {
-    min-width: 24px;
-    gap: 3px;
-  }
-
-  .keyboard-row {
-    gap: 3px;
-  }
-}
-
-/* ==========================================
-   TALL SCREENS
-   ========================================== */
-@media (min-height: 700px) {
-  .main {
-    padding-top: 24px;
-    padding-bottom: 20px;
-    gap: 24px;
-  }
-}
-
-/* ==========================================
-   SCROLLBAR
-   ========================================== */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--color-bg); }
-::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
-
-/* ==========================================
-   FOCUS VISIBLE (accessibility)
-   ========================================== */
-.key:focus-visible,
-.modal-share-btn:focus-visible,
-.modal-close-btn:focus-visible {
-  outline: 2px solid var(--color-correct);
-  outline-offset: 2px;
+margin: 2px;
+padding: 10px;
+background: #818384;
+border-radius: 4px;
+cursor: pointer;
+user-select: none;
 }
